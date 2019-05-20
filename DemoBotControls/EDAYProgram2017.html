@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width">
+        <script type="text/javascript" src="jquery-3.1.1.min.js"></script>
+        <style>
+          h1.title{
+            text-align: center;
+            color: rgb(225,225,225);
+            font-size: 27px;
+            font-style: italic;
+            font-family: fantasy;
+            font-weight: bold;
+          }
+          div.img {
+              margin-right: auto;
+              margin-left: auto;
+              border: 30px solid #ccc;
+              border-style: outset;
+              border-color: rgb(225,225,225);
+              float: left;
+              width:711px;
+              height:400px;
+              position: absolute;
+              right: 395px;
+              top: 60px;
+          }
+        /*  div.img:hover{
+            border: 1px solid #777;
+          }*/
+          div.img img {
+            width: 100%;
+            height: 100%;
+          }
+          div.desc{
+              padding: 0px;
+              font-family: fantasy;
+              font-size: 145%;
+              font-weight: bold;
+              text-align: center;
+              color:black;
+          }
+          body{
+            color: white;
+            background-color: rgb(0,51,160);
+            background-image: url("wildcat.png");
+            background-repeat: no-repeat;
+            background-position: top right;
+          }
+
+
+          table{position: absolute;
+          right: 3px;
+          top: 90px;}
+
+         table, th, td {
+           border-collapse: collapse;
+           border: 3px solid black;
+           margin-top: 250px;
+
+         }
+         tr {color: black;background-color: grey;}
+         th{color: black;background-color: white;}
+
+          </style>
+    </head>
+
+
+    <body>
+    <h1 class="title">
+      NASA Robotic Mining Competition       K.A.T.S. (Kentucky AstroRobotics Terrain Solutions)
+    </h1>
+
+
+    <table id = "Mytable" width = 300 height=100>
+          <tr>
+            <th>Sensor</th>
+            <th>Reading</th>
+            <th>Units</th>
+          </tr>
+          <tr>
+            <td>Front Linear Actuator</td>
+            <td>0</td>
+            <td>mm</td>
+          </tr>
+          <tr>
+            <td>Rear Linear Actuator</td>
+            <td>0</td>
+            <td>mm</td>
+          </tr>
+          <tr>
+            <td>Hall Effect</td>
+            <td>0</td>
+            <td>RPM</td>
+          </tr>
+          <tr>
+            <td>Load Cells</td>
+            <td>0</td>
+            <td>kg</td>
+          </tr>
+          <tr>
+            <td>Gate Status</td>
+            <td>Up</td>
+            <td>Up/Down</td>
+          </tr>
+          <tr>
+            <td>Tilt Reading</td>
+            <td>0</td>
+            <td>Units</td>
+          </tr>
+
+
+    </table>
+
+
+
+
+    <div id="gamepadPrompt"></div>
+    <div id="gamepadDisplay"></div>
+    <div id="MsgServ"></div>
+    <script src="http://192.168.0.101:8888/socket.io/socket.io.js"></script>
+
+    <script>
+    var socket = io.connect('http://192.168.0.101:8888');
+    var hasGP = false;
+    var repGP;
+    var data = ""
+
+    function canGame()
+    {
+        return "getGamepads" in navigator;
+    }
+
+    function reportOnGamepad() {
+        var gp = navigator.getGamepads()[0];
+        var html = "";
+            html += gp.id+"<br/>";
+
+        for(var i=0;i<gp.buttons.length;i++) {
+            html+= "Button "+(i+1)+": ";
+            if(gp.buttons[i].pressed) html+= " pressed";
+            html+= "<br/>";
+        }
+
+      for(var i=0;i<gp.axes.length; i+=2) {
+            html+= "Stick "+(Math.ceil(i/2)+1)+":" +  "<br/>"+gp.axes[i]+"<br/>"+gp.axes[i+1]+"<br/>";
+            if(i==0)
+            {
+              var numfr = gp.axes[i+1];
+              var numlr = gp.axes[i+3];
+              var mtrmsg = "motor" + numfr.toString() + ":" + numlr.toString();
+
+              socket.emit('chat message',  mtrmsg);
+              //console.log(num.toString());
+            }
+        }
+
+        if(gp.buttons[1].pressed)
+        {
+      		socket.emit('chat message', 'Pic');
+      	}
+        $("#gamepadDisplay").html(html);
+
+        if(gp.buttons[3].pressed)
+        {
+          socket.emit('chat message', 'stop');
+        }
+        $("#gamepadDisplay").html(html);
+      }
+
+    $(document).ready(function() {
+
+
+
+        if(canGame()) {
+
+            var prompt = "To begin using your gamepad, connect it and press any button!";
+            $("#gamepadPrompt").text(prompt);
+
+            socket.on('image', function(encpic){
+
+              var img = new Image();
+              document.getElementById("image").src='data:image/jpeg;base64,' + encpic.buffer;
+
+            });
+
+            socket.on('chat message', function(msg){
+              document.getElementById("Mytable").rows[1].cells[1].innerHTML=msg;
+            });
+
+
+            $(window).on("gamepadconnected", function() {
+                hasGP = true;
+                $("#gamepadPrompt").html("Gamepad connected!");
+                console.log("connection event");
+                repGP = window.setInterval(reportOnGamepad,300);
+            });
+
+            $(window).on("gamepaddisconnected", function() {
+                console.log("disconnection event");
+                $("#gamepadPrompt").text(prompt);
+                window.clearInterval(repGP);
+            });
+
+            //setup an interval for Chrome
+            var checkGP = window.setInterval(function() {
+                console.log('checkGP');
+                if(navigator.getGamepads()[0]) {
+                    if(!hasGP) $(window).trigger("gamepadconnected");
+                    window.clearInterval(checkGP);
+                }
+            }, 500);
+        }
+
+
+    });
+    .slidecontainer {
+      width: 100%;
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 15px;
+      border-radius: 5px;
+      background: #d3d3d3;
+      outline: none;
+      opacity: 0.7;
+      -webkit-transition: .2s;
+      transition: opacity .2s;
+    }
+
+    .slider:hover {
+      opacity: 1;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      background: #4CAF50;
+      cursor: pointer;
+    }
+
+    .slider::-moz-range-thumb {
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      background: #4CAF50;
+      cursor: pointer;
+    }
+    </style>
+    </head>
+    <body>
+
+    <h1>Round Range Slider</h1>
+
+    <div class="""slidecontainer">
+      <input type="range" min="1" max="100" value="50" class="slider" id="myRange">
+      <p>Value: <span id="demo"></span></p>
+    </div>
+
+    <script>
+    var slider = document.getElementById("myRange");
+    var output = document.getElementById("demo");
+    output.innerHTML = slider.value;
+
+    slider.oninput = function() {
+      output.innerHTML = this.value;
+    }
+    </script>
+    <div class="img">
+    <a target="_blank" href="image.jpg">
+    <img id = "image" src = "image.jpg" alt = "image" width="600px" height="600px" align="right">
+    </a>
+    <div class="desc">
+      Front Camera View
+    </div>
+    </div>
+    </body>
+
+</html>

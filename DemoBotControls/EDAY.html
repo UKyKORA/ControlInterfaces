@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<style>
+
+h1 {
+text-align:center;
+padding-bottom: 2cm;
+}
+
+h2 {
+text-align:center;
+}
+
+.slidecontainer {
+  width: 100%;
+}
+
+.slider {
+  -webkit-appearance: none;
+  width: 95%;
+  height: 15px;
+  border-radius: 5px;
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+-ms-touch-action: none;
+touch-action: none;
+}
+
+.slider:hover {
+  opacity: 1;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: #4CAF50;
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: #4CAF50;
+  cursor: pointer;
+}
+
+.button {
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 0 auto;
+  cursor: pointer;
+}
+
+.button2 {background-color: #f44336;} /* Red */
+.button3 {background-color: #f4bf42;} /* Yellow */
+
+</style>
+</head>
+<body>
+
+<img src="KATS.png" alt="KATS Logo" style="float:left;width:100px;height:100px;">
+<img src="NASAKY.png" alt="NASA KY Logo" style="float:right;height:100px;">
+
+
+<h1>Kentucky AstroRobotics Terrain Systems (KATS)</h1>
+
+<p></p>
+
+<div align="center">
+	<h2>Motor 1</h2>
+		<div class="slidecontainer">
+			<input type="range" min="-255" max="255" value="0" class="slider" id="PWM1">
+			<p>Value: <span id="demo1"></span></p>
+		</div>
+
+
+	<h2>Motor 2</h2>
+
+	<div class="slidecontainer">
+		<input type="range" min="-255" max="255" value="0" class="slider" id="PWM2">
+		<p>Value: <span id="demo2"></span></p>
+	</div>
+
+	<h2>Motor 3</h2>
+
+	<div class="slidecontainer">
+		<input type="range" min="-255" max="255" value="0" class="slider" id="PWM3">
+		<p>Value: <span id="demo3"></span></p>
+	</div>
+
+	<h2>Motor 4</h2>
+
+	<div class="slidecontainer">
+		<input type="range" min="-255" max="255" value="0" class="slider" id="PWM4">
+		<p>Value: <span id="demo4"></span></p>
+	</div>
+</div>
+
+
+<button class="button" type="button" onclick="connect()">Connect</button>
+<button class="button button2" type="button" onclick="disconnect()">Disconnect</button>
+<button class="button button3" type="button" onclick="stopMotors()">Stop Motors</button>
+
+
+<script>
+var slider1 = document.getElementById("PWM1");
+var output1 = document.getElementById("demo1");
+var slider2 = document.getElementById("PWM2");
+var output2 = document.getElementById("demo2");
+var slider3 = document.getElementById("PWM3");
+var output3 = document.getElementById("demo3");
+var slider4 = document.getElementById("PWM4");
+var output4 = document.getElementById("demo4");
+var stopBut = document.getElementById("stopButton");
+
+
+var ws = null;
+/* var url = "ws://localhost:1234"; */
+/* var url = "wss://echo.websocket.org/"; /*this is an echo server, replace with real server later */
+/* var ws = new WebSocket(url); */
+
+output1.innerHTML = slider1.value;
+output2.innerHTML = slider2.value;
+output3.innerHTML = slider3.value;
+output4.innerHTML = slider4.value;
+
+/* ws.onmessage = function(evt) { onMessage(evt) }; */
+
+// wait at least 200 ms between websocket sends per motor
+var sendDelay = 1000;
+var sendCount = 0;
+// store last websocket send time per motor
+var lastSend = Array(4).fill(0);
+
+function sliderChange(i, e) {
+	if( sendCount++ % 10 != 0 && i != -1){
+		return;
+	}
+	
+	if( i==-1 ) i=0;
+	
+	var mVals = Array(4);
+	mVals[0] = output1.innerHTML;
+	mVals[1] = output2.innerHTML;
+	mVals[2] = output3.innerHTML;
+	mVals[3] = output4.innerHTML;
+	
+	var sendString = "M";
+	for( var j=0;j<4;j++ ){
+		sendString += ((mVals[j] < 0) ? "0" : "1") + String(Math.abs(Number(mVals[j]))).padStart(3,'0');
+	}
+	sendString +='\n';
+	
+	console.log(sendString);
+	
+	if( ws ){
+		ws.send(sendString);
+	}
+}
+
+slider1.oninput = function(e) {
+  output1.innerHTML = this.value;
+  sliderChange(1,e);
+}
+
+slider2.oninput = function(e) {
+  output2.innerHTML = this.value;  
+  sliderChange(2,e);
+}
+
+slider3.oninput = function(e) {
+  output3.innerHTML = this.value;
+  sliderChange(3,e);
+}
+
+slider4.oninput = function(e) {
+  output4.innerHTML = this.value;
+  sliderChange(4,e);
+}
+
+stopBut.onclick = function(e) {
+	slider1.value = 0;
+	slider2.value = 0;
+	slider3.value = 0;
+	slider4.value = 0;
+	output1.innerHTML = 0;
+	output2.innerHTML = 0;
+	output3.innerHTML = 0;
+	output4.innerHTML = 0;
+	
+	sliderChange(-1,e);
+}
+
+function onMessage(evt)
+{
+	alert(evt.data);
+}
+
+  function connect() {
+  console.log("connecting");
+  if ("WebSocket" in window) {
+  var socketURL = location.origin.replace(/^http/, 'ws') + ':1234';
+  
+               // Let us open a web socket
+               ws = new WebSocket(socketURL);
+				//ws = new WebSocket(url);	
+				
+               ws.onopen = function() {
+				console.log("opened websocket to ",url);
+                  // Web Socket is connected, send data using send()
+                  ws.send("publish motors");
+               };
+				
+               ws.onmessage = function (evt) { 
+                  var received_msg = evt.data;
+                  console.log(received_msg);
+               };
+				
+               ws.onclose = function() { 
+                  
+                  // websocket is closed.
+                 console.log("websocket connection closed!!");
+               };
+            } else {
+              
+               // The browser doesn't support WebSocket
+               alert("WebSocket NOT supported by your Browser!");
+            }
+  }
+
+
+  function disconnect() {
+    ws.close();
+    console.log("user inititated disconnection");
+  }
+</script>
+
+</body>
+</html>

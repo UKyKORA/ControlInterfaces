@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<style>
+
+div, p {margin:0px; padding:0px;}
+#container{
+	width:100%;
+	height:100%;
+	position:fixed;
+}
+#top{height:25%;}
+#middle{height:60%;}
+#bottom{height:15%;}
+
+h1 {
+	text-align:cetner;
+	font-size: 10vw;
+}
+h2 {
+	text-align:cetner;
+}
+
+p{
+	text-align:cetner;
+	font-weight: bold;
+	margin: 1px;
+	font-family: Arial;
+	font-size: 6vw;
+}
+
+.button{
+	background-color: #d3d3d3;
+	width: 70%;
+	height: 16%;
+	border: none;
+	color: white;
+	padding: 15px 15px;
+	text-align: center;
+	text-decoration: none;
+	display: inline-block;
+	font-size: 8vw;
+	margin: 5px;
+	cursor: pointer;
+	opacity: 0.7;
+	
+	border-radius: 10px;
+}
+.button:hover{
+	opacity: 1;
+}
+
+.button2 {background-color: #4CAF50;} /*Green*/
+.button3 {background-color: #f44336;} /*Red*/
+
+.SelSty{
+	border-style: solid;
+	border-color: black;
+	border-radius: 5px;
+	border: 0,0,0;
+   color: 0,0,0;
+   //background: transparent;
+   font-size: 7vw;
+   font-weight: bold;
+   padding: 2px 10px;
+   margin: 3vw;
+   text-align: center;
+   width: 50%;
+   //*width: 350px;
+   *background: #58B14C;
+   -webkit-appearance: none;
+}
+
+
+</style>
+</head>
+<body>
+<div align="center">
+<div id="container">
+	<div id="top">
+	<img src="KATS.png" alt="KATS Logo" style="float:center-left;width:20vw;height:20vw;">
+	<img src="NASAKY.png" alt="NASA KY Logo" style="float:center-right;height:20vw;">
+	<p></p>
+	<select class = "SelSty" id="motorSelect" onchange="val()">
+		<option value="1">Motor 1</option>
+		<option value="2" selectedIndex ="2">Motor 2</option>
+		<option value="3">Motor 3</option>
+		<option value="4">Motor 4</option>
+	</select>
+	</div>
+	<div id="middle">
+	<button class="button button2" type="button" onclick="connect()">Connect</button>
+	<button class="button button3" type="button" onclick="disconnect()">Disconnect</button>
+	<button class="button" type="button" onmousedown="forward();updateMsg();" onmouseup="stop();updateMsg();" ontouchstart="forward();updateMsg();" ontouchend="stop();updateMsg();" >Forward</button>
+	<button class="button" type="button" onclick="stop();updateMsg();">Stop</button>
+	<button class="button" type="button" onmousedown="reverse();updateMsg();" onmouseup="stop();updateMsg();" ontouchstart="reverse();updateMsg();" ontouchend="stop();updateMsg();">Reverse</button>
+	</div>
+	<div id="bottom">
+	<p>Kentucky AstroRobotic</p> 
+	<p>Terrain Systems</p>
+	<p>E-Day 2019</p>
+	</div>
+</div>
+</div>
+<script>
+var select = document.getElementById("motorSelect");
+var motor = select.options[select.selectedIndex].value;
+var message_out = 'M1000100010001000';
+var m1='0000';
+var m2='0000';
+var m3='0000';
+var m4='0000';
+
+function val()
+{
+	select = document.getElementById("motorSelect");
+	motor = (select.options[select.selectedIndex].value);
+}
+
+/* TODO add websocket communication stuff for each of the buttons*/
+function forward() {
+	if(motor=="1"){
+		m1='1100';
+	}
+	else if(motor=="2"){
+		m2='1100';
+	}
+	else if(motor=="3"){
+		m3='1100';
+	}
+	else if(motor=="4"){
+		m4='1100';
+	}
+}
+function stop() {
+	if(motor=="1"){
+		m1='1000';
+	}
+	else if(motor=="2"){
+		m2='1000';
+	}
+	else if(motor=="3"){
+		m3='1000';
+	}
+	else if(motor=="4"){
+		m4='1000';
+	}
+	
+}
+function reverse(){
+	if(motor=="1"){
+		m1='0100';
+	}
+	else if(motor=="2"){
+		m2='0100';
+	}
+	else if(motor=="3"){
+		m3='0100';
+	}
+	else if(motor=="4"){
+		m4='0100';
+	}
+}
+
+function updateMsg(){
+		console.log(motor);
+		message_out = 'M' + m1 + m2 + m3 + m4;
+		console.log(message_out);
+}
+
+function connect() {
+  console.log("connecting");
+  if ("WebSocket" in window) {
+  var socketURL = location.origin.replace(/^http/, 'ws') + ':1234';
+  
+               // Let us open a web socket
+               ws = new WebSocket(socketURL);
+				//ws = new WebSocket(url);	
+				
+               ws.onopen = function() {
+				console.log("opened websocket to ",url);
+                  // Web Socket is connected, send data using send()
+                  ws.send("publish motors");
+               };
+				
+               ws.onmessage = function (evt) { 
+                  var received_msg = evt.data;
+                  console.log(received_msg);
+               };
+				
+               ws.onclose = function() { 
+                  
+                  // websocket is closed.
+                 console.log("websocket connection closed!!");
+               };
+            } else {
+              
+               // The browser doesn't support WebSocket
+               alert("WebSocket NOT supported by your Browser!");
+            }
+}
+
+function disconnect() {
+	ws.close();
+	console.log("user inititated disconnection");
+}
+</script>
+</body>
+</html>
